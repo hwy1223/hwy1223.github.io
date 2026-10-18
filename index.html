@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#070608" />
+  <meta
+    name="description"
+    content="指尖花是一朵由手势实时塑形的 Three.js 粒子花。握拳收拢花苞，张开五指让一万五千颗微光绽放。"
+  />
+  <title>指尖花 · 手势粒子花园</title>
+  <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+  <link rel="stylesheet" href="./css/styles.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/three.module.js",
+        "@mediapipe/tasks-vision": "./vendor/mediapipe/vision_bundle.mjs"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="site" id="site">
+    <div class="atmosphere" aria-hidden="true">
+      <div class="wash wash--amber"></div>
+      <div class="wash wash--rose"></div>
+      <div class="grid-field"></div>
+      <div class="orbit orbit--outer"></div>
+      <div class="orbit orbit--inner"></div>
+      <div class="axis-mark axis-mark--north">N</div>
+      <div class="axis-mark axis-mark--east">E</div>
+    </div>
+
+    <video id="cameraFeed" class="camera-feed" playsinline muted autoplay aria-hidden="true"></video>
+    <div class="camera-veil" aria-hidden="true"></div>
+    <div class="flower-halo" id="flowerHalo" aria-hidden="true"></div>
+
+    <main class="scene" aria-label="手势控制的粒子花">
+      <canvas id="scene" aria-label="一朵由粒子构成、可用手势控制开合的花"></canvas>
+      <div class="frame" aria-hidden="true">
+        <span class="frame-corner frame-corner--tl"></span>
+        <span class="frame-corner frame-corner--tr"></span>
+        <span class="frame-corner frame-corner--bl"></span>
+        <span class="frame-corner frame-corner--br"></span>
+        <span class="frame-caption frame-caption--left">REALTIME PARTICLE BOTANY</span>
+        <span class="frame-caption frame-caption--right">SHANGHAI / 31.23°N</span>
+      </div>
+    </main>
+
+    <div class="grain" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="指尖花首页">
+        <svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <g stroke="currentColor" stroke-width="0.9">
+            <path d="M20 20C13.5 17.5 10.3 12 12.4 6.4c5.2 1.4 8.3 6.3 7.6 13.6Z" />
+            <path d="M20 20c1.9-6.5 7-10.2 12.8-8.7-1 5.3-5.6 8.8-12.8 8.7Z" />
+            <path d="M20 20c6.4 2.4 9.4 8 7.2 13.5-5.1-1.5-8-6.4-7.2-13.5Z" />
+            <path d="M20 20c-2 6.4-7.1 10-12.8 8.5 1-5.3 5.6-8.6 12.8-8.5Z" />
+            <circle cx="20" cy="20" r="2.3" />
+          </g>
+        </svg>
+        <span class="brand-type">
+          <span class="brand-cn">指尖花</span>
+          <span class="brand-en">PETAL / IN PALM</span>
+        </span>
+      </a>
+
+      <div class="top-actions">
+        <div class="status-pill" id="statusPill" data-state="idle" role="status" aria-live="polite">
+          <i class="status-dot" aria-hidden="true"></i>
+          <span id="statusText">等待唤醒</span>
+        </div>
+        <button class="round-button" id="aboutBtn" type="button" aria-label="关于项目与手势算法">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="8.2" stroke="currentColor" stroke-width="1" />
+            <path d="M12 10.7v5.1" stroke="currentColor" stroke-linecap="round" />
+            <circle cx="12" cy="8" r="0.8" fill="currentColor" />
+          </svg>
+        </button>
+        <button class="round-button round-button--exit" id="exitBtn" type="button" aria-label="结束手势感知" title="结束感知" hidden>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 8.4h3l1.4-2h7.2l1.4 2h3v9.1H4V8.4Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" />
+            <path d="M4.4 4.4 19.6 19.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" />
+            <path d="M10.2 10.5a2.7 2.7 0 0 0 3.8 3.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="intro" id="intro" aria-labelledby="heroTitle">
+      <div class="intro-shade" aria-hidden="true"></div>
+      <div class="intro-inner">
+        <p class="intro-index">
+          <span>INTERACTIVE BOTANICAL STUDY</span>
+          <span class="intro-index-line" aria-hidden="true"></span>
+          <span>Nº 001</span>
+        </p>
+
+        <h1 class="hero-title" id="heroTitle">
+          <span class="title-line"><span class="title-rise">让光，</span></span>
+          <span class="title-line title-line--offset"><span class="title-rise">在指尖<em>开花</em>。</span></span>
+        </h1>
+
+        <p class="hero-copy">
+          握紧，是尚未说出口的春天；<br />
+          张开，是一万颗光的绽放。
+        </p>
+
+        <div class="cta-row">
+          <button class="button button--primary" id="startBtn" type="button">
+            <span class="button-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 8.5h3l1.4-2h7.2l1.4 2h3v8.9H4V8.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+                <circle cx="12" cy="12.8" r="3.1" stroke="currentColor" stroke-width="1.2" />
+              </svg>
+            </span>
+            <span class="button-label">以手势唤醒花朵</span>
+            <span class="button-arrow" aria-hidden="true">↗</span>
+            <span class="button-spinner" aria-hidden="true"></span>
+          </button>
+          <button class="button button--ghost" id="demoBtn" type="button">
+            先看一场演示
+            <span class="ghost-dot" aria-hidden="true"></span>
+          </button>
+        </div>
+
+        <div class="intro-error" id="introError" role="alert" hidden>
+          <span class="error-glyph" aria-hidden="true">!</span>
+          <div class="error-copy">
+            <strong id="introErrorTitle">摄像头未能启动</strong>
+            <p id="introErrorMessage"></p>
+          </div>
+          <button class="text-button" id="retryCameraBtn" type="button">再试一次</button>
+        </div>
+
+        <div class="hero-meta">
+          <span><b id="particleCount">15,000</b> PARTICLES</span>
+          <i aria-hidden="true"></i>
+          <span><b>21</b> LANDMARKS</span>
+          <i aria-hidden="true"></i>
+          <span class="meta-local"><b>ON-DEVICE</b> PRIVACY</span>
+        </div>
+
+        <p class="privacy-note">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="5.5" y="10" width="13" height="9" rx="1.6" stroke="currentColor" stroke-width="1" />
+            <path d="M8.5 10V7.8a3.5 3.5 0 0 1 7 0V10" stroke="currentColor" stroke-width="1" />
+          </svg>
+          画面只在本地识别，不会被上传或保存
+        </p>
+      </div>
+
+      <aside class="intro-aside" aria-hidden="true">
+        <span>A STUDY IN LIGHT &amp; GESTURE</span>
+        <span class="intro-aside-rule"></span>
+        <span>VOL. 01 / 2026</span>
+      </aside>
+    </section>
+
+    <section class="live-hud" id="liveHud" aria-label="实时手势数据" aria-hidden="true">
+      <div class="live-session">
+        <span class="micro-label">LIVE SESSION</span>
+        <span class="live-session-line" aria-hidden="true"></span>
+        <span class="live-session-code">FLW / 001</span>
+      </div>
+
+      <div class="gesture-guide">
+        <span class="micro-label">HOW TO BLOOM</span>
+        <div class="guide-items">
+          <div class="guide-item">
+            <span class="guide-number">01</span>
+            <span class="guide-copy"><b>轻轻握拳</b><small>花苞合拢</small></span>
+            <svg class="guide-icon" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+              <path d="M12 25c0-5 2.8-9 7.3-9 2.9 0 4.5 1.4 5.2 3.1.7-3.6 2.7-6.2 6.2-6.2 4.6 0 6.3 4 6.3 8.5v5.1c0 5.2-3.5 8.5-9.1 8.5h-6.3C16 35 12 31.2 12 25.9V25Z" stroke="currentColor" stroke-width="1" />
+              <path d="M17 18v-2.4c0-1.8 1.2-3.2 2.8-3.2 1.7 0 2.7 1.4 2.7 3.3" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
+            </svg>
+          </div>
+          <span class="guide-divider" aria-hidden="true"></span>
+          <div class="guide-item">
+            <span class="guide-number">02</span>
+            <span class="guide-copy"><b>张开五指</b><small>花瓣绽放</small></span>
+            <svg class="guide-icon" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+              <path d="M15 25.5 12.8 11.8c-.2-1.7 1-2.9 2.4-3 1.5-.1 2.6 1 2.8 2.6l1.5 9.2M19.4 20l-.7-11.2c-.1-1.6 1-2.7 2.5-2.7 1.4 0 2.5 1.1 2.6 2.8l.4 11.3M24.8 20.4l.7-10.6c.1-1.7 1.2-2.8 2.7-2.8 1.4 0 2.4 1.2 2.3 2.8l-.6 11.2M30.4 22.7l1.7-7.7c.4-1.7 1.6-2.6 3-2.2 1.3.3 2 1.6 1.6 3.2l-2.4 11.4c-.8 4.1-3.5 7.6-8.4 7.6h-3.7c-3.8 0-6.5-1.4-8.1-4.4L11 25" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="tension-card">
+        <div class="tension-head">
+          <span class="micro-label">HAND OPENNESS</span>
+          <span class="tension-cn">手势张力</span>
+        </div>
+        <div class="tension-value">
+          <span id="tensionValue">00</span>
+          <span class="tension-unit">/100</span>
+        </div>
+        <div class="tension-track" id="tensionTrack" aria-hidden="true">
+          <span class="tension-fill" id="tensionFill"></span>
+          <i class="tension-thumb" id="tensionThumb"></i>
+          <i class="tension-tick tension-tick--one"></i>
+          <i class="tension-tick tension-tick--two"></i>
+          <span class="tension-threshold tension-threshold--one">.32</span>
+          <span class="tension-threshold tension-threshold--two">.66</span>
+        </div>
+        <div class="tension-foot">
+          <span class="state-chip" id="stateChip" data-state="waiting">
+            <i aria-hidden="true"></i>
+            <span id="stateText">等待手部</span>
+          </span>
+          <span class="bloom-readout">BLOOM <b id="bloomValue">00</b>%</span>
+        </div>
+      </div>
+
+      <figure class="preview-card" id="previewCard" aria-label="摄像头与手部关键点预览">
+        <header class="preview-head">
+          <span class="preview-live"><i aria-hidden="true"></i><span id="previewTitle">LIVE VISION</span></span>
+          <button class="landmark-toggle" id="landmarkBtn" type="button" aria-pressed="true" title="显示或隐藏手部关键点">
+            <span class="landmark-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span>LANDMARKS</span>
+          </button>
+        </header>
+        <div class="preview-viewport">
+          <canvas id="handCanvas" width="480" height="320" aria-label="手部关键点叠加预览"></canvas>
+          <div class="preview-message" id="previewMessage">
+            <i class="search-ring" aria-hidden="true"></i>
+            <span>将手掌放入画面</span>
+          </div>
+          <span class="preview-corner preview-corner--tl" aria-hidden="true"></span>
+          <span class="preview-corner preview-corner--tr" aria-hidden="true"></span>
+          <span class="preview-corner preview-corner--bl" aria-hidden="true"></span>
+          <span class="preview-corner preview-corner--br" aria-hidden="true"></span>
+        </div>
+        <footer class="preview-foot">
+          <span id="previewHint">正在寻找手部</span>
+          <span class="preview-stats">
+            <button class="demo-connect" id="demoConnect" type="button" hidden>连接摄像头</button>
+            <span id="fpsValue">-- FPS</span>
+          </span>
+        </footer>
+      </figure>
+
+      <div class="live-hint" id="liveHint">
+        <span class="hint-word">握拳</span>
+        <span class="hint-copy">花瓣收拢</span>
+        <i aria-hidden="true"></i>
+        <span class="hint-word">张开</span>
+        <span class="hint-copy">让光绽放</span>
+      </div>
+
+      <div class="model-loader" id="modelLoader" hidden>
+        <span class="loader-orbit" aria-hidden="true"><i></i></span>
+        <span class="model-loader-copy">
+          <b>正在唤醒手部模型</b>
+          <small>HAND LANDMARKER · LOCAL WASM</small>
+        </span>
+      </div>
+
+      <div class="model-error" id="modelError" role="alert" hidden>
+        <div>
+          <strong>手部模型未能加载</strong>
+          <span id="modelErrorText">请检查本地资源是否完整，然后重试。</span>
+        </div>
+        <button class="text-button" id="retryModelBtn" type="button">重试模型</button>
+      </div>
+    </section>
+
+    <div class="hand-cursor" id="handCursor" aria-hidden="true" hidden>
+      <span class="hand-cursor-ring"></span>
+      <span class="hand-cursor-core"></span>
+    </div>
+
+    <div class="app-loader" id="appLoader" aria-hidden="true">
+      <div class="app-loader-mark"><span></span><span></span><span></span><span></span><span></span></div>
+      <p>正在种下一朵光</p>
+      <small>CALIBRATING PARTICLES</small>
+    </div>
+
+    <div class="fatal-error" id="fatalError" hidden role="alert">
+      <p class="micro-label">THE GARDEN COULD NOT OPEN</p>
+      <h2>这片花园需要 WebGL。</h2>
+      <p>请尝试更新浏览器、开启硬件加速，或使用新版 Chrome / Edge / Safari 再次打开。</p>
+      <button class="button button--primary" type="button" onclick="location.reload()">重新载入</button>
+    </div>
+
+    <dialog class="info-dialog" id="aboutDialog" aria-labelledby="aboutTitle">
+      <div class="dialog-head">
+        <span class="micro-label">ABOUT THE STUDY / 001</span>
+        <button class="dialog-close" id="closeAboutBtn" type="button" aria-label="关闭">×</button>
+      </div>
+      <div class="dialog-scroll">
+        <h2 id="aboutTitle">一朵会<br />呼吸的花。</h2>
+        <p class="dialog-lede">
+          这是一次关于身体与光的小型实验。MediaPipe 在本地读取 21 个手部关键点，
+          Three.js 将它们换算成一场持续变化的花期。
+        </p>
+
+        <div class="dialog-steps">
+          <div class="dialog-step">
+            <span>01 / 感知</span>
+            <p>摄像头逐帧寻找手部。画面不会离开这台设备，也不会被录制。</p>
+          </div>
+          <div class="dialog-step">
+            <span>02 / 测量</span>
+            <p>用「指尖到手腕」与「指根到手腕」的比值衡量每根手指的伸展程度，再换算为 0–1 的手势张力。</p>
+          </div>
+          <div class="dialog-step">
+            <span>03 / 开花</span>
+            <p>张力低于 0.32 时，粒子收拢成花苞；高于 0.66 时完全盛放；中间是一段柔软、延迟半拍的过渡。</p>
+          </div>
+        </div>
+
+        <div class="formula-card">
+          <span class="micro-label">THE GESTURE EQUATION</span>
+          <code>r<sub>f</sub> = ‖tip<sub>f</sub> − wrist‖ ÷ ‖mcp<sub>f</sub> − wrist‖</code>
+          <code>E<sub>f</sub> = smoothstep(1.03, 1.70, r<sub>f</sub>)</code>
+          <code>tension = clamp( 0.86 Σw<sub>f</sub>E<sub>f</sub> + 0.14 S<sub>aperture</sub> )</code>
+          <p>指数平滑后，tension 映射为 0–1 的绽放值。每一次展开都来自你的手，而不是预设动画。</p>
+        </div>
+
+        <p class="dialog-privacy">
+          <span aria-hidden="true">◌</span>
+          本地识别 · 不上传 · 不录制
+        </p>
+        <div class="credits">
+          <span>THREE.JS</span><i></i><span>MEDIAPIPE HAND LANDMARKER</span><i></i><span>VANILLA JS</span>
+        </div>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
